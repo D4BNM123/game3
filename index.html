@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Aim Trainer — Advanced</title>
+  <title>Aim Trainer — Advanced (with Reaction Time)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
@@ -21,8 +21,8 @@
     #hud{
       position:fixed;left:12px;top:12px;padding:10px 12px;background:var(--glass);backdrop-filter:blur(6px);border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:12px;align-items:center;z-index:60;
     }
-    #hud .stat{font-size:14px;color:var(--muted)}
-    #hud .stat strong{color:var(--text);display:block;font-size:16px}
+    #hud .stat{font-size:13px;color:var(--muted);min-width:84px}
+    #hud .stat strong{color:var(--text);display:block;font-size:15px}
     /* Game area */
     #game-area{position:fixed;inset:0;cursor:crosshair;overflow:hidden}
     /* Targets */
@@ -31,10 +31,11 @@
       user-select:none;touch-action:none;will-change:transform,opacity;
       box-shadow:0 6px 18px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.15);
       border:2px solid rgba(255,255,255,0.06);
+      z-index:30;
     }
-    .target.core{background:linear-gradient(180deg,#ff9b9b,#ff6b6b)}
-    .target.ring{background:linear-gradient(180deg,#ffd166,#ffb86b)}
-    .target.sniper{background:linear-gradient(180deg,#7be495,#3bd07a)}
+    .core{background:linear-gradient(180deg,#ff9b9b,#ff6b6b)}
+    .ring{background:linear-gradient(180deg,#ffd166,#ffb86b)}
+    .sniper{background:linear-gradient(180deg,#7be495,#3bd07a)}
     /* Tracer */
     .tracer{position:absolute;height:3px;background:linear-gradient(90deg,var(--accent),rgba(0,209,255,0.2));transform-origin:left center;pointer-events:none;z-index:50}
     /* Break pieces */
@@ -66,11 +67,13 @@
 <body>
   <!-- HUD -->
   <div id="hud" aria-live="polite">
-    <div class="stat"><strong id="score">0</strong><span style="font-size:12px;color:var(--muted)">Score</span></div>
-    <div class="stat"><strong id="time">30</strong><span style="font-size:12px;color:var(--muted)">Time</span></div>
-    <div class="stat"><strong id="accuracy">0%</strong><span style="font-size:12px;color:var(--muted)">Accuracy</span></div>
-    <div class="stat"><strong id="weapon-name">—</strong><span style="font-size:12px;color:var(--muted)">Weapon</span></div>
-    <div class="stat"><strong id="level-name">1</strong><span style="font-size:12px;color:var(--muted)">Level</span></div>
+    <div class="stat"><strong id="score">0</strong><span>Score</span></div>
+    <div class="stat"><strong id="time">30</strong><span>Time</span></div>
+    <div class="stat"><strong id="accuracy">0%</strong><span>Accuracy</span></div>
+    <div class="stat"><strong id="last-reaction">—</strong><span>Last RT (s)</span></div>
+    <div class="stat"><strong id="avg-reaction">—</strong><span>Avg RT (s)</span></div>
+    <div class="stat"><strong id="weapon-name">—</strong><span>Weapon</span></div>
+    <div class="stat"><strong id="level-name">1</strong><span>Level</span></div>
   </div>
 
   <!-- Game area -->
@@ -170,19 +173,14 @@
 
   <script>
     /*
-      Advanced Aim Trainer — Single HTML file
-      Features implemented:
-      - Weapon selection (pistol, shotgun, sniper, smg) with different size/spawn/multiplier
-      - Level selector that changes spawn speed (targets change faster on higher levels)
-      - Bullet tracer: short animated line from click point to target center
-      - Break animation: target shatters into pieces when shot
-      - Pause menu (Esc) that pauses timer and gameplay; allows weapon/level change, restart, or return to menu
-      - Menu and restart options
-      - HUD with score, time, accuracy, weapon, level
-      - Accessibility: overlays use role attributes; game area is focusable
+      Aim Trainer — fixes requested:
+      - Accuracy capped at 100%
+      - Track reaction time: time between target spawn and user click
+      - Show last reaction time and average reaction time in HUD and results
+      - Shots count includes hits (so accuracy is hits / shots)
     */
 
-    // DOM references
+    // DOM refs
     const gameArea = document.getElementById('game-area');
     const startScreen = document.getElementById('start-screen');
     const pauseScreen = document.getElementById('pause-screen');
@@ -203,6 +201,8 @@
     const scoreEl = document.getElementById('score');
     const timeEl = document.getElementById('time');
     const accuracyEl = document.getElementById('accuracy');
+    const lastReactionEl = document.getElementById('last-reaction');
+    const avgReactionEl = document.getElementById('avg-reaction');
     const weaponNameEl = document.getElementById('weapon-name');
     const levelNameEl = document.getElementById('level-name');
 
@@ -210,18 +210,23 @@
     const endRestart = document.getElementById('end-restart');
     const endMenu = document.getElementById('end-menu');
 
-    // Game state
+    // State
     let running = false;
     let paused = false;
     let timerId = null;
     let respawnTimeout = null;
     let currentTarget = null;
+    let spawnTimestamp = null;
 
     let score = 0;
-    let shots = 0;
+    let shots = 0; // total shots fired (includes hits)
     let hits = 0;
     let timeLeft = 30;
     let duration = 30;
+
+    // Reaction times
+    let lastReaction = null;
+    const reactions = []; // seconds
 
     // Weapon and level configs
     const WEAPONS = {
@@ -242,37 +247,41 @@
     let currentWeaponKey = 'pistol';
     let currentLevel = 1;
 
-    // Utility helpers
+    // Helpers
     function rand(min, max){ return Math.random() * (max - min) + min; }
     function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+    function formatSeconds(s){ return (Math.round(s * 100) / 100).toFixed(2); }
 
     // HUD update
     function updateHUD(){
       scoreEl.textContent = Math.round(score);
       timeEl.textContent = Math.max(0, Math.ceil(timeLeft));
-      accuracyEl.textContent = shots ? Math.round((hits / shots) * 100) + '%' : '0%';
+      const rawAcc = shots > 0 ? (hits / shots) * 100 : 0;
+      const cappedAcc = Math.min(100, Math.round(rawAcc));
+      accuracyEl.textContent = cappedAcc + '%';
+      lastReactionEl.textContent = lastReaction === null ? '—' : formatSeconds(lastReaction);
+      const avg = reactions.length ? reactions.reduce((a,b)=>a+b,0)/reactions.length : null;
+      avgReactionEl.textContent = avg === null ? '—' : formatSeconds(avg);
       weaponNameEl.textContent = currentWeaponKey;
       levelNameEl.textContent = currentLevel;
     }
 
     // Start game
     function startGame({ demo = false } = {}){
-      // Read selections
       currentWeaponKey = weaponSelect.value;
       currentLevel = parseInt(levelSelect.value, 10);
       duration = parseInt(durationSelect.value, 10);
 
-      // Sync pause menu selects
       pauseWeaponSelect.value = currentWeaponKey;
       pauseLevelSelect.value = currentLevel;
 
-      // Reset state
       score = 0; shots = 0; hits = 0;
       timeLeft = duration;
       running = true;
       paused = false;
+      lastReaction = null;
+      reactions.length = 0;
 
-      // UI
       startScreen.style.display = 'none';
       pauseScreen.style.display = 'none';
       endScreen.style.display = 'none';
@@ -280,14 +289,13 @@
 
       updateHUD();
 
-      // Spawn first target
       spawnTarget();
 
-      // Start timer (uses high-resolution interval for pause accuracy)
-      const tick = () => {
+      // Timer tick every 100ms for smoothness and pause handling
+      function tick(){
         if (!running) return;
         if (!paused){
-          timeLeft -= 0.1; // decrement in 100ms steps
+          timeLeft -= 0.1;
           if (timeLeft <= 0){
             timeLeft = 0;
             updateHUD();
@@ -297,34 +305,31 @@
           updateHUD();
         }
         timerId = setTimeout(tick, 100);
-      };
+      }
       tick();
 
-      // Demo mode: auto-fire occasionally (for preview)
       if (demo){
         demoAutoFire();
       }
     }
 
-    // Demo auto-fire (non-intrusive)
+    // Demo auto-fire
     let demoInterval = null;
     function demoAutoFire(){
       if (demoInterval) clearInterval(demoInterval);
       demoInterval = setInterval(() => {
         if (!running || paused) return;
-        // simulate a click at target center if exists
         if (currentTarget){
+          // simulate a hit at center
           const rect = currentTarget.getBoundingClientRect();
           const cx = rect.left + rect.width / 2;
           const cy = rect.top + rect.height / 2;
-          handleShot({ clientX: cx + rand(-6,6), clientY: cy + rand(-6,6) }, true);
+          // call internal hit handler directly to ensure shots/hits counted correctly
+          simulateHitAt(cx, cy);
         }
       }, 600);
     }
-
-    function stopDemo(){
-      if (demoInterval) { clearInterval(demoInterval); demoInterval = null; }
-    }
+    function stopDemo(){ if (demoInterval) { clearInterval(demoInterval); demoInterval = null; } }
 
     // End game
     function endGame(){
@@ -335,24 +340,27 @@
       stopDemo();
       removeTarget();
       // Show results
+      const rawAcc = shots > 0 ? (hits / shots) * 100 : 0;
+      const cappedAcc = Math.min(100, Math.round(rawAcc));
+      const avg = reactions.length ? reactions.reduce((a,b)=>a+b,0)/reactions.length : null;
       resultsSummary.innerHTML = `
         <div style="font-size:18px"><strong>Score:</strong> ${Math.round(score)}</div>
-        <div style="font-size:16px;color:var(--muted)"><strong>Shots:</strong> ${shots} &nbsp; <strong>Hits:</strong> ${hits} &nbsp; <strong>Accuracy:</strong> ${shots ? Math.round((hits/shots)*100) + '%' : '0%'}</div>
+        <div style="font-size:15px;color:var(--muted)"><strong>Shots:</strong> ${shots} &nbsp; <strong>Hits:</strong> ${hits} &nbsp; <strong>Accuracy:</strong> ${cappedAcc}%</div>
+        <div style="margin-top:8px;color:var(--muted)"><strong>Last RT:</strong> ${lastReaction === null ? '—' : formatSeconds(lastReaction) + 's'} &nbsp; <strong>Avg RT:</strong> ${avg === null ? '—' : formatSeconds(avg) + 's'}</div>
         <div style="margin-top:8px;color:var(--muted)"><strong>Weapon:</strong> ${currentWeaponKey} &nbsp; <strong>Level:</strong> ${currentLevel} &nbsp; <strong>Duration:</strong> ${duration}s</div>
       `;
       endScreen.style.display = 'flex';
     }
 
-    // Remove current target safely
+    // Remove current target
     function removeTarget(){
-      if (currentTarget && currentTarget.parentElement) {
-        currentTarget.remove();
-      }
+      if (currentTarget && currentTarget.parentElement) currentTarget.remove();
       currentTarget = null;
+      spawnTimestamp = null;
       if (respawnTimeout) { clearTimeout(respawnTimeout); respawnTimeout = null; }
     }
 
-    // Spawn a target
+    // Spawn a target and record spawn time
     function spawnTarget(){
       removeTarget();
       if (!running || paused) return;
@@ -367,24 +375,32 @@
       el.style.top = Math.max(6, Math.random() * (window.innerHeight - size - 12)) + 'px';
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', 'Target');
-      // Add subtle inner mark for aiming
+
       el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
         <circle cx="${size/2}" cy="${size/2}" r="${size/6}" fill="rgba(255,255,255,0.12)"/>
       </svg>`;
 
-      // Click handler for hit
+      // pointerdown handler: register hit (counts as a shot and a hit)
       el.addEventListener('pointerdown', (ev) => {
         ev.stopPropagation();
         if (!running || paused) return;
-        // Register hit
+        // increment shots and hits
+        shots++;
         hits++;
+        // compute reaction time if spawnTimestamp exists
+        const now = performance.now();
+        if (spawnTimestamp !== null){
+          const rt = (now - spawnTimestamp) / 1000; // seconds
+          lastReaction = rt;
+          reactions.push(rt);
+        }
+        // score and HUD
         score += weapon.multiplier;
         updateHUD();
-        // Create tracer from click point to center
+        // tracer and break
         bulletTracer(ev.clientX, ev.clientY, el);
-        // Break animation
         breakTarget(el);
-        // Schedule next spawn after spawnDelay * levelFactor
+        // schedule next spawn
         const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
         respawnTimeout = setTimeout(() => {
           if (!running || paused) return;
@@ -392,27 +408,50 @@
         }, spawnDelay);
       });
 
-      // Add to DOM
       gameArea.appendChild(el);
       currentTarget = el;
+      spawnTimestamp = performance.now();
     }
 
-    // Handle shots (misses) when clicking anywhere else
+    // Simulate a hit at coordinates (used by demo auto-fire)
+    function simulateHitAt(x, y){
+      if (!currentTarget) return;
+      // increment shots and hits
+      shots++;
+      hits++;
+      const now = performance.now();
+      if (spawnTimestamp !== null){
+        const rt = (now - spawnTimestamp) / 1000;
+        lastReaction = rt;
+        reactions.push(rt);
+      }
+      const weapon = WEAPONS[currentWeaponKey];
+      score += weapon.multiplier;
+      updateHUD();
+      bulletTracer(x, y, currentTarget);
+      breakTarget(currentTarget);
+      const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
+      respawnTimeout = setTimeout(() => {
+        if (!running || paused) return;
+        spawnTarget();
+      }, spawnDelay);
+    }
+
+    // Handle misses and general shots
     function handleShot(ev, isAuto = false){
       if (!running || paused) return;
-      // Count shot (auto shots from demo shouldn't increment shots)
-      if (!isAuto) {
+      // If click was on a target, that handler will count shot/hit.
+      // For misses, count shot only (do not increment hits).
+      if (!isAuto && !ev.target.classList.contains('target')){
         shots++;
+        updateHUD();
       }
-      updateHUD();
-      // If clicked on a target, the target's pointerdown handles hit
-      // But we still draw tracer for visual feedback
+      // draw tracer for feedback
       const clickX = ev.clientX;
       const clickY = ev.clientY;
       if (currentTarget){
         bulletTracer(clickX, clickY, currentTarget);
       } else {
-        // tracer to a point in front (short)
         const tracer = document.createElement('div');
         tracer.className = 'tracer';
         tracer.style.left = clickX + 'px';
@@ -426,6 +465,7 @@
 
     // Bullet tracer: line from (x,y) to center of targetEl
     function bulletTracer(x, y, targetEl){
+      if (!targetEl) return;
       const rect = targetEl.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
@@ -441,7 +481,6 @@
       tracer.style.transform = `rotate(${angle}deg)`;
       tracer.style.opacity = '1';
       gameArea.appendChild(tracer);
-      // Fade and remove
       tracer.animate([
         { opacity: 1, transform: tracer.style.transform + ' scaleX(1)' },
         { opacity: 0, transform: tracer.style.transform + ' scaleX(0.98)' }
@@ -449,9 +488,9 @@
       setTimeout(()=>tracer.remove(), 220);
     }
 
-    // Break animation: spawn small pieces that fly out and fade
+    // Break animation
     function breakTarget(targetEl){
-      // compute center
+      if (!targetEl) return;
       const rect = targetEl.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
@@ -464,7 +503,6 @@
         piece.style.height = size + 'px';
         piece.style.left = (cx - size/2) + 'px';
         piece.style.top = (cy - size/2) + 'px';
-        // color based on weapon class
         const w = WEAPONS[currentWeaponKey];
         let bg = '#ff6b6b';
         if (w.className === 'ring') bg = '#ffb86b';
@@ -472,7 +510,6 @@
         piece.style.background = bg;
         piece.style.opacity = '1';
         gameArea.appendChild(piece);
-        // animate piece
         const angle = Math.random() * Math.PI * 2;
         const dist = rand(rect.width * 0.6, rect.width * 1.6);
         const dx = Math.cos(angle) * dist;
@@ -484,9 +521,9 @@
         ], { duration: 520 + Math.random()*240, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
         setTimeout(()=>piece.remove(), 900);
       }
-      // remove the target element immediately (visual pieces replace it)
       if (targetEl && targetEl.parentElement) targetEl.remove();
       currentTarget = null;
+      spawnTimestamp = null;
     }
 
     // Pause/resume
@@ -495,17 +532,14 @@
       paused = typeof forceState === 'boolean' ? forceState : !paused;
       if (paused){
         pauseScreen.style.display = 'flex';
-        // sync selects
         pauseWeaponSelect.value = currentWeaponKey;
         pauseLevelSelect.value = currentLevel;
       } else {
         pauseScreen.style.display = 'none';
-        // apply any changes made in pause menu
         const newWeapon = pauseWeaponSelect.value;
         const newLevel = parseInt(pauseLevelSelect.value, 10);
         if (newWeapon !== currentWeaponKey){
           currentWeaponKey = newWeapon;
-          // change target size immediately if target exists
           if (currentTarget){
             const w = WEAPONS[currentWeaponKey];
             currentTarget.style.width = w.size + 'px';
@@ -519,19 +553,15 @@
       updateHUD();
     }
 
-    // Restart current run
+    // Restart run
     function restartRun(){
-      // clear timers and state
       running = false;
       paused = false;
       clearTimeout(timerId);
       clearTimeout(respawnTimeout);
       stopDemo();
       removeTarget();
-      // small delay to ensure cleanup
-      setTimeout(() => {
-        startGame();
-      }, 120);
+      setTimeout(() => startGame(), 120);
     }
 
     // Back to menu
@@ -542,7 +572,6 @@
       clearTimeout(respawnTimeout);
       stopDemo();
       removeTarget();
-      // show start screen
       startScreen.style.display = 'flex';
       pauseScreen.style.display = 'none';
       endScreen.style.display = 'none';
@@ -553,28 +582,22 @@
     startBtn.addEventListener('click', () => startGame({ demo: false }));
     demoBtn.addEventListener('click', () => startGame({ demo: true }));
 
-    // Pause menu buttons
     pauseResume.addEventListener('click', () => togglePause(false));
     pauseRestart.addEventListener('click', () => { togglePause(false); restartRun(); });
     pauseMenu.addEventListener('click', () => backToMenu());
 
-    // End screen buttons
     endRestart.addEventListener('click', () => { endScreen.style.display = 'none'; startScreen.style.display = 'flex'; });
     endMenu.addEventListener('click', () => backToMenu());
 
-    // Pause via ESC key
+    // ESC to pause/resume
     window.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape'){
         if (!running) {
-          // if not running, show/hide menu
-          if (startScreen.style.display === 'none') {
-            startScreen.style.display = 'flex';
-          }
+          if (startScreen.style.display === 'none') startScreen.style.display = 'flex';
           return;
         }
         togglePause();
       }
-      // Space to restart quickly when not running
       if (ev.key === ' ' && !running){
         ev.preventDefault();
         startGame();
@@ -583,10 +606,9 @@
 
     // Click handling on game area
     gameArea.addEventListener('pointerdown', (ev) => {
-      // If clicking on UI overlays, ignore
       if (!running || paused) return;
-      // If pointerdown target is a target element, its handler will manage hit
-      // We still count shots for misses
+      // If clicked on a target, its handler counts shot/hit.
+      // For misses, count shot only.
       if (!ev.target.classList.contains('target')){
         shots++;
         updateHUD();
@@ -594,7 +616,7 @@
       }
     });
 
-    // Resize handling: ensure target stays in bounds if window resizes
+    // Resize handling
     window.addEventListener('resize', () => {
       if (currentTarget){
         const rect = currentTarget.getBoundingClientRect();
@@ -606,15 +628,14 @@
       }
     });
 
-    // Accessibility: focus game area on load
+    // Accessibility focus
     window.addEventListener('load', () => {
       gameArea.setAttribute('tabindex', '0');
       updateHUD();
     });
 
-    // Ensure pause menu weapon/level changes apply when changed directly
+    // Pause menu immediate visual update
     pauseWeaponSelect.addEventListener('change', () => {
-      // immediate visual feedback
       const newWeapon = pauseWeaponSelect.value;
       if (currentTarget){
         const w = WEAPONS[newWeapon];
@@ -623,20 +644,14 @@
       }
     });
 
-    pauseLevelSelect.addEventListener('change', () => {
-      // no immediate action needed; applied on resume
-    });
-
-    // Prevent context menu on right click for cleaner experience
+    // Prevent context menu
     gameArea.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Initial HUD update
+    // Initial HUD
     updateHUD();
 
-    // Expose some functions for debugging in console (optional)
-    window._aimTrainer = {
-      startGame, restartRun, backToMenu, togglePause, spawnTarget, endGame
-    };
+    // Expose for debugging
+    window._aimTrainer = { startGame, restartRun, backToMenu, togglePause, spawnTarget, endGame };
   </script>
 </body>
 </html>
