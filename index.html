@@ -223,6 +223,7 @@
       const angle = Math.atan2(dy, dx) * (180 / Math.PI);
       const tracer = document.createElement('div');
       tracer.className = 'tracer';
+      // place tracer's left at sx, top at sy (adjusted so line is centered vertically)
       tracer.style.left = sx + 'px';
       tracer.style.top = (sy - 1.5) + 'px';
       tracer.style.width = dist + 'px';
@@ -236,8 +237,7 @@
       setTimeout(()=>{ if (tracer.parentElement) tracer.remove(); }, 220);
     }
 
-    // When user clicks anywhere, draw tracer from gun origin to crosshair (click position)
-    // For hits, target handler will still handle scoring and reaction time; tracer uses click coords
+    // When user clicks anywhere, draw tracer from bottom-center to the click (crosshair)
     function handleShot(ev, isAuto = false){
       if (!running || paused) return;
       // Count shot for misses (target handler counts hits)
@@ -246,7 +246,6 @@
         updateHUD();
       }
       const origin = getGunOrigin();
-      // Use the click coordinates (crosshair) as tracer destination
       const destX = ev.clientX;
       const destY = ev.clientY;
       createTracer(origin.x, origin.y, destX, destY);
@@ -256,6 +255,7 @@
     function spawnTarget(){
       removeTarget();
       if (!running || paused) return;
+
       const weapon = WEAPONS[currentWeaponKey];
       const size = weapon.size;
       const el = document.createElement('div');
@@ -266,6 +266,7 @@
       el.style.top = Math.max(6, Math.random() * (window.innerHeight - size - 12)) + 'px';
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', 'Target');
+
       el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
         <circle cx="${size/2}" cy="${size/2}" r="${size/6}" fill="rgba(255,255,255,0.12)"/>
       </svg>`;
@@ -515,17 +516,15 @@
     // Pointer handling: draw tracer from bottom-center to crosshair (click position)
     gameArea.addEventListener('pointerdown', (ev) => {
       if (!running || paused) return;
-      // If clicking on a target, its handler will count shot/hit; still draw tracer to crosshair
+      // Always draw tracer from bottom-center to the click position (crosshair)
       const origin = getGunOrigin();
       createTracer(origin.x, origin.y, ev.clientX, ev.clientY);
-      // For misses, count shot
+
+      // If clicking on a target, its handler will also run (counts shot/hit).
+      // For misses, count shot here.
       if (!ev.target.classList.contains('target')){
         shots++;
         updateHUD();
-      }
-      // If not a target, still call handleShot for any additional behavior
-      if (!ev.target.classList.contains('target')){
-        handleShot(ev);
       }
     });
 
