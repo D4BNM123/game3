@@ -2,70 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Aim Trainer — Advanced (Bottom-Center Tracer)</title>
+  <title>Aim Trainer — Bottom-Center Tracer to Crosshair</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
       --bg:#0b0f14;
-      --panel:rgba(255,255,255,0.04);
       --accent:#00d1ff;
-      --accent-2:#ff6b6b;
       --text:#e6eef3;
       --muted:#9fb0bd;
       --glass: rgba(255,255,255,0.03);
-      --radius:10px;
     }
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--text);background:linear-gradient(180deg,#071018 0%, #0b0f14 100%);-webkit-font-smoothing:antialiased}
-    /* HUD */
-    #hud{
-      position:fixed;left:12px;top:12px;padding:10px 12px;background:var(--glass);backdrop-filter:blur(6px);border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:12px;align-items:center;z-index:60;
-    }
+    #hud{position:fixed;left:12px;top:12px;padding:10px 12px;background:var(--glass);backdrop-filter:blur(6px);border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:12px;align-items:center;z-index:60}
     #hud .stat{font-size:13px;color:var(--muted);min-width:84px}
     #hud .stat strong{color:var(--text);display:block;font-size:15px}
-    /* Game area */
     #game-area{position:fixed;inset:0;cursor:crosshair;overflow:hidden}
-    /* Targets */
-    .target{
-      position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
-      user-select:none;touch-action:none;will-change:transform,opacity;
-      box-shadow:0 6px 18px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.15);
-      border:2px solid rgba(255,255,255,0.06);
-      z-index:30;
-    }
+    .target{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:none;will-change:transform,opacity;box-shadow:0 6px 18px rgba(0,0,0,0.6), inset 0 -6px 12px rgba(0,0,0,0.15);border:2px solid rgba(255,255,255,0.06);z-index:30}
     .core{background:linear-gradient(180deg,#ff9b9b,#ff6b6b)}
     .ring{background:linear-gradient(180deg,#ffd166,#ffb86b)}
     .sniper{background:linear-gradient(180deg,#7be495,#3bd07a)}
-    /* Tracer */
     .tracer{position:absolute;height:3px;background:linear-gradient(90deg,var(--accent),rgba(0,209,255,0.2));transform-origin:left center;pointer-events:none;z-index:50}
-    /* Break pieces */
     .piece{position:absolute;border-radius:50%;pointer-events:none;z-index:55}
-    /* Overlays */
-    .overlay{
-      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,10,0.6);z-index:70;
-    }
-    .panel{
-      width:min(720px,92%);background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02));padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 40px rgba(0,0,0,0.6);
-    }
+    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,10,0.6);z-index:70}
+    .panel{width:min(720px,92%);background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02));padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 40px rgba(0,0,0,0.6)}
     h1{margin:0 0 8px 0;font-size:22px}
     p{margin:6px 0;color:var(--muted)}
     .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     select,button{padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);font-size:15px;cursor:pointer}
     button.primary{background:linear-gradient(90deg,var(--accent),#6be7ff);color:#022;box-shadow:0 6px 18px rgba(0,209,255,0.08)}
     .small{padding:8px 10px;font-size:13px}
-    /* End screen */
-    #end-screen .panel{display:flex;flex-direction:column;align-items:center;gap:12px}
-    /* Pause screen layout */
-    #pause-screen .panel{display:flex;flex-direction:column;gap:10px;align-items:center}
-    /* Responsive */
-    @media (max-width:520px){
-      #hud{flex-direction:column;left:8px;top:8px;padding:8px}
-      .controls{flex-direction:column;align-items:stretch}
-    }
+    @media (max-width:520px){#hud{flex-direction:column;left:8px;top:8px;padding:8px}.controls{flex-direction:column;align-items:stretch}}
   </style>
 </head>
 <body>
-  <!-- HUD -->
   <div id="hud" aria-live="polite">
     <div class="stat"><strong id="score">0</strong><span>Score</span></div>
     <div class="stat"><strong id="time">30</strong><span>Time</span></div>
@@ -76,18 +46,14 @@
     <div class="stat"><strong id="level-name">1</strong><span>Level</span></div>
   </div>
 
-  <!-- Game area -->
   <div id="game-area" tabindex="0" aria-label="Aim trainer play area"></div>
 
-  <!-- Start overlay -->
   <div id="start-screen" class="overlay" role="dialog" aria-modal="true">
     <div class="panel" role="document">
-      <h1>Aim Trainer — Advanced</h1>
+      <h1>Aim Trainer — Bottom-Center Tracer</h1>
       <p>Choose a weapon and level. Press <strong>Start Game</strong> to begin. Press <kbd>Esc</kbd> during play to pause.</p>
-
       <div class="controls" style="align-items:center">
-        <label>
-          Weapon
+        <label>Weapon
           <select id="weapon-select" aria-label="Weapon select">
             <option value="pistol">Pistol — balanced</option>
             <option value="shotgun">Shotgun — big targets, low multiplier</option>
@@ -95,9 +61,7 @@
             <option value="smg">SMG — fast respawn, moderate multiplier</option>
           </select>
         </label>
-
-        <label>
-          Level
+        <label>Level
           <select id="level-select" aria-label="Level select">
             <option value="1">Level 1 — relaxed</option>
             <option value="2">Level 2 — quicker</option>
@@ -105,9 +69,7 @@
             <option value="4">Level 4 — extreme</option>
           </select>
         </label>
-
-        <label>
-          Duration
+        <label>Duration
           <select id="duration-select" aria-label="Duration select">
             <option value="15">15s</option>
             <option value="30" selected>30s</option>
@@ -115,7 +77,6 @@
           </select>
         </label>
       </div>
-
       <div style="display:flex;gap:10px;margin-top:12px;justify-content:center">
         <button id="start-btn" class="primary">Start Game</button>
         <button id="demo-btn" class="small">Demo Mode</button>
@@ -123,15 +84,12 @@
     </div>
   </div>
 
-  <!-- Pause overlay -->
   <div id="pause-screen" class="overlay" style="display:none" role="dialog" aria-modal="true">
     <div class="panel">
       <h1>Paused</h1>
       <p>Press <kbd>Esc</kbd> to resume. Change weapon or restart from here.</p>
-
       <div class="controls">
-        <label>
-          Weapon
+        <label>Weapon
           <select id="pause-weapon-select" aria-label="Pause weapon select">
             <option value="pistol">Pistol</option>
             <option value="shotgun">Shotgun</option>
@@ -139,9 +97,7 @@
             <option value="smg">SMG</option>
           </select>
         </label>
-
-        <label>
-          Level
+        <label>Level
           <select id="pause-level-select" aria-label="Pause level select">
             <option value="1">Level 1</option>
             <option value="2">Level 2</option>
@@ -150,7 +106,6 @@
           </select>
         </label>
       </div>
-
       <div style="display:flex;gap:10px;justify-content:center;margin-top:10px">
         <button id="pause-resume" class="primary">Resume</button>
         <button id="pause-restart" class="small">Restart</button>
@@ -159,7 +114,6 @@
     </div>
   </div>
 
-  <!-- End overlay -->
   <div id="end-screen" class="overlay" style="display:none" role="dialog" aria-modal="true">
     <div class="panel">
       <h1>Results</h1>
@@ -172,14 +126,6 @@
   </div>
 
   <script>
-    /*
-      Aim Trainer — Final update:
-      - Bullet tracer originates from bottom-center of viewport (gun barrel)
-      - Miss tracers also originate from bottom-center
-      - Accuracy capped at 100%
-      - Reaction time tracking (last and average) shown in HUD and results
-    */
-
     // DOM refs
     const gameArea = document.getElementById('game-area');
     const startScreen = document.getElementById('start-screen');
@@ -219,16 +165,14 @@
     let spawnTimestamp = null;
 
     let score = 0;
-    let shots = 0; // total shots fired (includes hits)
+    let shots = 0;
     let hits = 0;
     let timeLeft = 30;
     let duration = 30;
 
-    // Reaction times
     let lastReaction = null;
-    const reactions = []; // seconds
+    const reactions = [];
 
-    // Weapon and level configs
     const WEAPONS = {
       pistol: { size: 56, baseSpawn: 900, multiplier: 1, className: 'core' },
       shotgun: { size: 92, baseSpawn: 1200, multiplier: 0.6, className: 'ring' },
@@ -243,16 +187,13 @@
       4: { speedFactor: 0.48 }
     };
 
-    // Current selections
     let currentWeaponKey = 'pistol';
     let currentLevel = 1;
 
-    // Helpers
     function rand(min, max){ return Math.random() * (max - min) + min; }
     function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
     function formatSeconds(s){ return (Math.round(s * 100) / 100).toFixed(2); }
 
-    // HUD update
     function updateHUD(){
       scoreEl.textContent = Math.round(score);
       timeEl.textContent = Math.max(0, Math.ceil(timeLeft));
@@ -266,102 +207,55 @@
       levelNameEl.textContent = currentLevel;
     }
 
-    // Start game
-    function startGame({ demo = false } = {}){
-      currentWeaponKey = weaponSelect.value;
-      currentLevel = parseInt(levelSelect.value, 10);
-      duration = parseInt(durationSelect.value, 10);
+    // Gun origin: bottom-center (slightly above bottom so tracer is visible)
+    function getGunOrigin(){
+      const startX = Math.round(window.innerWidth / 2);
+      const startY = Math.round(window.innerHeight - 12);
+      return { x: startX, y: startY };
+    }
 
-      pauseWeaponSelect.value = currentWeaponKey;
-      pauseLevelSelect.value = currentLevel;
+    // Create tracer from (sx,sy) to (ex,ey)
+    function createTracer(sx, sy, ex, ey){
+      const dx = ex - sx;
+      const dy = ey - sy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 6) return; // too short
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      const tracer = document.createElement('div');
+      tracer.className = 'tracer';
+      tracer.style.left = sx + 'px';
+      tracer.style.top = (sy - 1.5) + 'px';
+      tracer.style.width = dist + 'px';
+      tracer.style.transform = `rotate(${angle}deg)`;
+      tracer.style.opacity = '1';
+      gameArea.appendChild(tracer);
+      tracer.animate([
+        { opacity: 1, transform: tracer.style.transform + ' scaleX(1)' },
+        { opacity: 0, transform: tracer.style.transform + ' scaleX(0.98)' }
+      ], { duration: 180, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(()=>{ if (tracer.parentElement) tracer.remove(); }, 220);
+    }
 
-      score = 0; shots = 0; hits = 0;
-      timeLeft = duration;
-      running = true;
-      paused = false;
-      lastReaction = null;
-      reactions.length = 0;
-
-      startScreen.style.display = 'none';
-      pauseScreen.style.display = 'none';
-      endScreen.style.display = 'none';
-      gameArea.focus();
-
-      updateHUD();
-
-      spawnTarget();
-
-      // Timer tick every 100ms for smoothness and pause handling
-      function tick(){
-        if (!running) return;
-        if (!paused){
-          timeLeft -= 0.1;
-          if (timeLeft <= 0){
-            timeLeft = 0;
-            updateHUD();
-            endGame();
-            return;
-          }
-          updateHUD();
-        }
-        timerId = setTimeout(tick, 100);
+    // When user clicks anywhere, draw tracer from gun origin to crosshair (click position)
+    // For hits, target handler will still handle scoring and reaction time; tracer uses click coords
+    function handleShot(ev, isAuto = false){
+      if (!running || paused) return;
+      // Count shot for misses (target handler counts hits)
+      if (!isAuto && !ev.target.classList.contains('target')){
+        shots++;
+        updateHUD();
       }
-      tick();
-
-      if (demo){
-        demoAutoFire();
-      }
+      const origin = getGunOrigin();
+      // Use the click coordinates (crosshair) as tracer destination
+      const destX = ev.clientX;
+      const destY = ev.clientY;
+      createTracer(origin.x, origin.y, destX, destY);
     }
 
-    // Demo auto-fire
-    let demoInterval = null;
-    function demoAutoFire(){
-      if (demoInterval) clearInterval(demoInterval);
-      demoInterval = setInterval(() => {
-        if (!running || paused) return;
-        if (currentTarget){
-          const rect = currentTarget.getBoundingClientRect();
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
-          simulateHitAt(cx + rand(-6,6), cy + rand(-6,6));
-        }
-      }, 600);
-    }
-    function stopDemo(){ if (demoInterval) { clearInterval(demoInterval); demoInterval = null; } }
-
-    // End game
-    function endGame(){
-      running = false;
-      paused = false;
-      clearTimeout(timerId);
-      clearTimeout(respawnTimeout);
-      stopDemo();
-      removeTarget();
-      const rawAcc = shots > 0 ? (hits / shots) * 100 : 0;
-      const cappedAcc = Math.min(100, Math.round(rawAcc));
-      const avg = reactions.length ? reactions.reduce((a,b)=>a+b,0)/reactions.length : null;
-      resultsSummary.innerHTML = `
-        <div style="font-size:18px"><strong>Score:</strong> ${Math.round(score)}</div>
-        <div style="font-size:15px;color:var(--muted)"><strong>Shots:</strong> ${shots} &nbsp; <strong>Hits:</strong> ${hits} &nbsp; <strong>Accuracy:</strong> ${cappedAcc}%</div>
-        <div style="margin-top:8px;color:var(--muted)"><strong>Last RT:</strong> ${lastReaction === null ? '—' : formatSeconds(lastReaction) + 's'} &nbsp; <strong>Avg RT:</strong> ${avg === null ? '—' : formatSeconds(avg) + 's'}</div>
-        <div style="margin-top:8px;color:var(--muted)"><strong>Weapon:</strong> ${currentWeaponKey} &nbsp; <strong>Level:</strong> ${currentLevel} &nbsp; <strong>Duration:</strong> ${duration}s</div>
-      `;
-      endScreen.style.display = 'flex';
-    }
-
-    // Remove current target
-    function removeTarget(){
-      if (currentTarget && currentTarget.parentElement) currentTarget.remove();
-      currentTarget = null;
-      spawnTimestamp = null;
-      if (respawnTimeout) { clearTimeout(respawnTimeout); respawnTimeout = null; }
-    }
-
-    // Spawn a target and record spawn time
+    // Spawn target and record spawn time
     function spawnTarget(){
       removeTarget();
       if (!running || paused) return;
-
       const weapon = WEAPONS[currentWeaponKey];
       const size = weapon.size;
       const el = document.createElement('div');
@@ -372,37 +266,34 @@
       el.style.top = Math.max(6, Math.random() * (window.innerHeight - size - 12)) + 'px';
       el.setAttribute('role', 'button');
       el.setAttribute('aria-label', 'Target');
-
       el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
         <circle cx="${size/2}" cy="${size/2}" r="${size/6}" fill="rgba(255,255,255,0.12)"/>
       </svg>`;
 
-      // pointerdown handler: register hit (counts as a shot and a hit)
       el.addEventListener('pointerdown', (ev) => {
         ev.stopPropagation();
         if (!running || paused) return;
-        // increment shots and hits
+        // Count shot and hit
         shots++;
         hits++;
-        // compute reaction time if spawnTimestamp exists
+        // Reaction time
         const now = performance.now();
         if (spawnTimestamp !== null){
-          const rt = (now - spawnTimestamp) / 1000; // seconds
+          const rt = (now - spawnTimestamp) / 1000;
           lastReaction = rt;
           reactions.push(rt);
         }
-        // score and HUD
+        // Score
         score += weapon.multiplier;
         updateHUD();
-        // tracer and break
-        bulletTracerToTarget(el);
+        // Draw tracer from gun origin to the crosshair (click position)
+        const origin = getGunOrigin();
+        createTracer(origin.x, origin.y, ev.clientX, ev.clientY);
+        // Break animation
         breakTarget(el);
-        // schedule next spawn
+        // Schedule next spawn
         const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
-        respawnTimeout = setTimeout(() => {
-          if (!running || paused) return;
-          spawnTarget();
-        }, spawnDelay);
+        respawnTimeout = setTimeout(() => { if (!running || paused) return; spawnTarget(); }, spawnDelay);
       });
 
       gameArea.appendChild(el);
@@ -410,7 +301,7 @@
       spawnTimestamp = performance.now();
     }
 
-    // Simulate a hit at coordinates (used by demo auto-fire)
+    // Simulated hit (demo)
     function simulateHitAt(x, y){
       if (!currentTarget) return;
       shots++;
@@ -424,74 +315,11 @@
       const weapon = WEAPONS[currentWeaponKey];
       score += weapon.multiplier;
       updateHUD();
-      bulletTracerToTarget(currentTarget);
+      const origin = getGunOrigin();
+      createTracer(origin.x, origin.y, x, y);
       breakTarget(currentTarget);
       const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
-      respawnTimeout = setTimeout(() => {
-        if (!running || paused) return;
-        spawnTarget();
-      }, spawnDelay);
-    }
-
-    // Handle misses and general shots
-    function handleShot(ev, isAuto = false){
-      if (!running || paused) return;
-      // For misses, count shot only.
-      if (!isAuto && !ev.target.classList.contains('target')){
-        shots++;
-        updateHUD();
-      }
-      // draw tracer from bottom-center to either current target or a short line toward click
-      if (currentTarget){
-        bulletTracerToTarget(currentTarget);
-      } else {
-        bulletTracerToPoint(ev.clientX, ev.clientY);
-      }
-    }
-
-    // Compute bottom-center origin
-    function getGunOrigin(){
-      const startX = Math.round(window.innerWidth / 2);
-      const startY = Math.round(window.innerHeight); // bottom edge
-      return { x: startX, y: startY };
-    }
-
-    // Bullet tracer to a target (from bottom-center to target center)
-    function bulletTracerToTarget(targetEl){
-      if (!targetEl) return;
-      const rect = targetEl.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const origin = getGunOrigin();
-      createTracer(origin.x, origin.y, cx, cy);
-    }
-
-    // Bullet tracer to an arbitrary point (from bottom-center toward click point)
-    function bulletTracerToPoint(destX, destY){
-      const origin = getGunOrigin();
-      // shorten the tracer length so it doesn't overshoot the screen bottom
-      createTracer(origin.x, origin.y, destX, destY);
-    }
-
-    // Create tracer element from (sx,sy) to (ex,ey)
-    function createTracer(sx, sy, ex, ey){
-      const dx = ex - sx;
-      const dy = ey - sy;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-      const tracer = document.createElement('div');
-      tracer.className = 'tracer';
-      tracer.style.left = sx + 'px';
-      tracer.style.top = sy + 'px';
-      tracer.style.width = dist + 'px';
-      tracer.style.transform = `rotate(${angle}deg)`;
-      tracer.style.opacity = '1';
-      gameArea.appendChild(tracer);
-      tracer.animate([
-        { opacity: 1, transform: tracer.style.transform + ' scaleX(1)' },
-        { opacity: 0, transform: tracer.style.transform + ' scaleX(0.98)' }
-      ], { duration: 180, easing: 'ease-out', fill: 'forwards' });
-      setTimeout(()=>tracer.remove(), 220);
+      respawnTimeout = setTimeout(() => { if (!running || paused) return; spawnTarget(); }, spawnDelay);
     }
 
     // Break animation
@@ -532,6 +360,13 @@
       spawnTimestamp = null;
     }
 
+    function removeTarget(){
+      if (currentTarget && currentTarget.parentElement) currentTarget.remove();
+      currentTarget = null;
+      spawnTimestamp = null;
+      if (respawnTimeout) { clearTimeout(respawnTimeout); respawnTimeout = null; }
+    }
+
     // Pause/resume
     function togglePause(forceState){
       if (!running) return;
@@ -559,7 +394,6 @@
       updateHUD();
     }
 
-    // Restart run
     function restartRun(){
       running = false;
       paused = false;
@@ -570,7 +404,6 @@
       setTimeout(() => startGame(), 120);
     }
 
-    // Back to menu
     function backToMenu(){
       running = false;
       paused = false;
@@ -584,18 +417,87 @@
       updateHUD();
     }
 
-    // Event wiring
+    // Start game
+    function startGame({ demo = false } = {}){
+      currentWeaponKey = weaponSelect.value;
+      currentLevel = parseInt(levelSelect.value, 10);
+      duration = parseInt(durationSelect.value, 10);
+      pauseWeaponSelect.value = currentWeaponKey;
+      pauseLevelSelect.value = currentLevel;
+      score = 0; shots = 0; hits = 0;
+      timeLeft = duration;
+      running = true;
+      paused = false;
+      lastReaction = null;
+      reactions.length = 0;
+      startScreen.style.display = 'none';
+      pauseScreen.style.display = 'none';
+      endScreen.style.display = 'none';
+      gameArea.focus();
+      updateHUD();
+      spawnTarget();
+      function tick(){
+        if (!running) return;
+        if (!paused){
+          timeLeft -= 0.1;
+          if (timeLeft <= 0){
+            timeLeft = 0;
+            updateHUD();
+            endGame();
+            return;
+          }
+          updateHUD();
+        }
+        timerId = setTimeout(tick, 100);
+      }
+      tick();
+      if (demo) demoAutoFire();
+    }
+
+    // Demo auto-fire
+    let demoInterval = null;
+    function demoAutoFire(){
+      if (demoInterval) clearInterval(demoInterval);
+      demoInterval = setInterval(() => {
+        if (!running || paused) return;
+        if (currentTarget){
+          const rect = currentTarget.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          simulateHitAt(cx + rand(-6,6), cy + rand(-6,6));
+        }
+      }, 600);
+    }
+    function stopDemo(){ if (demoInterval) { clearInterval(demoInterval); demoInterval = null; } }
+
+    function endGame(){
+      running = false;
+      paused = false;
+      clearTimeout(timerId);
+      clearTimeout(respawnTimeout);
+      stopDemo();
+      removeTarget();
+      const rawAcc = shots > 0 ? (hits / shots) * 100 : 0;
+      const cappedAcc = Math.min(100, Math.round(rawAcc));
+      const avg = reactions.length ? reactions.reduce((a,b)=>a+b,0)/reactions.length : null;
+      resultsSummary.innerHTML = `
+        <div style="font-size:18px"><strong>Score:</strong> ${Math.round(score)}</div>
+        <div style="font-size:15px;color:var(--muted)"><strong>Shots:</strong> ${shots} &nbsp; <strong>Hits:</strong> ${hits} &nbsp; <strong>Accuracy:</strong> ${cappedAcc}%</div>
+        <div style="margin-top:8px;color:var(--muted)"><strong>Last RT:</strong> ${lastReaction === null ? '—' : formatSeconds(lastReaction) + 's'} &nbsp; <strong>Avg RT:</strong> ${avg === null ? '—' : formatSeconds(avg) + 's'}</div>
+        <div style="margin-top:8px;color:var(--muted)"><strong>Weapon:</strong> ${currentWeaponKey} &nbsp; <strong>Level:</strong> ${currentLevel} &nbsp; <strong>Duration:</strong> ${duration}s</div>
+      `;
+      endScreen.style.display = 'flex';
+    }
+
+    // Wiring
     startBtn.addEventListener('click', () => startGame({ demo: false }));
     demoBtn.addEventListener('click', () => startGame({ demo: true }));
-
     pauseResume.addEventListener('click', () => togglePause(false));
     pauseRestart.addEventListener('click', () => { togglePause(false); restartRun(); });
     pauseMenu.addEventListener('click', () => backToMenu());
-
     endRestart.addEventListener('click', () => { endScreen.style.display = 'none'; startScreen.style.display = 'flex'; });
     endMenu.addEventListener('click', () => backToMenu());
 
-    // ESC to pause/resume
     window.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape'){
         if (!running) {
@@ -610,19 +512,23 @@
       }
     });
 
-    // Click handling on game area
+    // Pointer handling: draw tracer from bottom-center to crosshair (click position)
     gameArea.addEventListener('pointerdown', (ev) => {
       if (!running || paused) return;
-      // If clicked on a target, its handler counts shot/hit.
-      // For misses, count shot only.
+      // If clicking on a target, its handler will count shot/hit; still draw tracer to crosshair
+      const origin = getGunOrigin();
+      createTracer(origin.x, origin.y, ev.clientX, ev.clientY);
+      // For misses, count shot
       if (!ev.target.classList.contains('target')){
         shots++;
         updateHUD();
+      }
+      // If not a target, still call handleShot for any additional behavior
+      if (!ev.target.classList.contains('target')){
         handleShot(ev);
       }
     });
 
-    // Resize handling
     window.addEventListener('resize', () => {
       if (currentTarget){
         const rect = currentTarget.getBoundingClientRect();
@@ -634,13 +540,11 @@
       }
     });
 
-    // Accessibility focus
     window.addEventListener('load', () => {
       gameArea.setAttribute('tabindex', '0');
       updateHUD();
     });
 
-    // Pause menu immediate visual update
     pauseWeaponSelect.addEventListener('change', () => {
       const newWeapon = pauseWeaponSelect.value;
       if (currentTarget){
@@ -650,10 +554,8 @@
       }
     });
 
-    // Prevent context menu
     gameArea.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Initial HUD
     updateHUD();
 
     // Expose for debugging
