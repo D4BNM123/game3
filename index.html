@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Neerav's Aim Trainer</title>
+  <title>Aim Trainer — Advanced (Bottom-Center Tracer)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
@@ -173,11 +173,11 @@
 
   <script>
     /*
-      Aim Trainer — fixes requested:
+      Aim Trainer — Final update:
+      - Bullet tracer originates from bottom-center of viewport (gun barrel)
+      - Miss tracers also originate from bottom-center
       - Accuracy capped at 100%
-      - Track reaction time: time between target spawn and user click
-      - Show last reaction time and average reaction time in HUD and results
-      - Shots count includes hits (so accuracy is hits / shots)
+      - Reaction time tracking (last and average) shown in HUD and results
     */
 
     // DOM refs
@@ -320,12 +320,10 @@
       demoInterval = setInterval(() => {
         if (!running || paused) return;
         if (currentTarget){
-          // simulate a hit at center
           const rect = currentTarget.getBoundingClientRect();
           const cx = rect.left + rect.width / 2;
           const cy = rect.top + rect.height / 2;
-          // call internal hit handler directly to ensure shots/hits counted correctly
-          simulateHitAt(cx, cy);
+          simulateHitAt(cx + rand(-6,6), cy + rand(-6,6));
         }
       }, 600);
     }
@@ -339,7 +337,6 @@
       clearTimeout(respawnTimeout);
       stopDemo();
       removeTarget();
-      // Show results
       const rawAcc = shots > 0 ? (hits / shots) * 100 : 0;
       const cappedAcc = Math.min(100, Math.round(rawAcc));
       const avg = reactions.length ? reactions.reduce((a,b)=>a+b,0)/reactions.length : null;
@@ -398,7 +395,7 @@
         score += weapon.multiplier;
         updateHUD();
         // tracer and break
-        bulletTracer(ev.clientX, ev.clientY, el);
+        bulletTracerToTarget(el);
         breakTarget(el);
         // schedule next spawn
         const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
@@ -416,7 +413,6 @@
     // Simulate a hit at coordinates (used by demo auto-fire)
     function simulateHitAt(x, y){
       if (!currentTarget) return;
-      // increment shots and hits
       shots++;
       hits++;
       const now = performance.now();
@@ -428,7 +424,7 @@
       const weapon = WEAPONS[currentWeaponKey];
       score += weapon.multiplier;
       updateHUD();
-      bulletTracer(x, y, currentTarget);
+      bulletTracerToTarget(currentTarget);
       breakTarget(currentTarget);
       const spawnDelay = weapon.baseSpawn * LEVELS[currentLevel].speedFactor;
       respawnTimeout = setTimeout(() => {
@@ -440,43 +436,53 @@
     // Handle misses and general shots
     function handleShot(ev, isAuto = false){
       if (!running || paused) return;
-      // If click was on a target, that handler will count shot/hit.
-      // For misses, count shot only (do not increment hits).
+      // For misses, count shot only.
       if (!isAuto && !ev.target.classList.contains('target')){
         shots++;
         updateHUD();
       }
-      // draw tracer for feedback
-      const clickX = ev.clientX;
-      const clickY = ev.clientY;
+      // draw tracer from bottom-center to either current target or a short line toward click
       if (currentTarget){
-        bulletTracer(clickX, clickY, currentTarget);
+        bulletTracerToTarget(currentTarget);
       } else {
-        const tracer = document.createElement('div');
-        tracer.className = 'tracer';
-        tracer.style.left = clickX + 'px';
-        tracer.style.top = clickY + 'px';
-        tracer.style.width = '40px';
-        tracer.style.transform = 'rotate(0deg)';
-        gameArea.appendChild(tracer);
-        setTimeout(()=>tracer.remove(), 180);
+        bulletTracerToPoint(ev.clientX, ev.clientY);
       }
     }
 
-    // Bullet tracer: line from (x,y) to center of targetEl
-    function bulletTracer(x, y, targetEl){
+    // Compute bottom-center origin
+    function getGunOrigin(){
+      const startX = Math.round(window.innerWidth / 2);
+      const startY = Math.round(window.innerHeight); // bottom edge
+      return { x: startX, y: startY };
+    }
+
+    // Bullet tracer to a target (from bottom-center to target center)
+    function bulletTracerToTarget(targetEl){
       if (!targetEl) return;
       const rect = targetEl.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-      const dx = cx - x;
-      const dy = cy - y;
+      const origin = getGunOrigin();
+      createTracer(origin.x, origin.y, cx, cy);
+    }
+
+    // Bullet tracer to an arbitrary point (from bottom-center toward click point)
+    function bulletTracerToPoint(destX, destY){
+      const origin = getGunOrigin();
+      // shorten the tracer length so it doesn't overshoot the screen bottom
+      createTracer(origin.x, origin.y, destX, destY);
+    }
+
+    // Create tracer element from (sx,sy) to (ex,ey)
+    function createTracer(sx, sy, ex, ey){
+      const dx = ex - sx;
+      const dy = ey - sy;
       const dist = Math.sqrt(dx*dx + dy*dy);
       const angle = Math.atan2(dy, dx) * (180 / Math.PI);
       const tracer = document.createElement('div');
       tracer.className = 'tracer';
-      tracer.style.left = x + 'px';
-      tracer.style.top = y + 'px';
+      tracer.style.left = sx + 'px';
+      tracer.style.top = sy + 'px';
       tracer.style.width = dist + 'px';
       tracer.style.transform = `rotate(${angle}deg)`;
       tracer.style.opacity = '1';
