@@ -33,6 +33,11 @@
     button.primary{background:linear-gradient(90deg,var(--accent),#6be7ff);color:#022;box-shadow:0 6px 18px rgba(0,209,255,0.08)}
     .small{padding:8px 10px;font-size:13px}
     @media (max-width:520px){#hud{flex-direction:column;left:8px;top:8px;padding:8px}.controls{flex-direction:column;align-items:stretch}}
+  
+    #ammo-hud{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);padding:10px 16px;background:rgba(0,0,0,.35);border-radius:12px;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;z-index:65}
+    #bullet-icon{font-size:20px;opacity:.7;transition:transform .08s,opacity .08s}
+    #bullet-icon.flash{opacity:1;transform:scale(1.4)}
+
   </style>
 </head>
 <body>
@@ -47,6 +52,7 @@
   </div>
 
   <div id="game-area" tabindex="0" aria-label="Aim trainer play area"></div>
+  <div id="ammo-hud"><span id="bullet-icon">•</span><strong id="ammo-display">9/27 bullets</strong></div>
 
   <div id="start-screen" class="overlay" role="dialog" aria-modal="true">
     <div class="panel" role="document">
@@ -151,6 +157,8 @@
     const avgReactionEl = document.getElementById('avg-reaction');
     const weaponNameEl = document.getElementById('weapon-name');
     const levelNameEl = document.getElementById('level-name');
+    const ammoDisplay = document.getElementById('ammo-display');
+    const bulletIcon = document.getElementById('bullet-icon');
 
     const resultsSummary = document.getElementById('results-summary');
     const endRestart = document.getElementById('end-restart');
@@ -174,10 +182,10 @@
     const reactions = [];
 
     const WEAPONS = {
-      pistol: { size: 56, baseSpawn: 900, multiplier: 1, className: 'core' },
-      shotgun: { size: 92, baseSpawn: 1200, multiplier: 0.6, className: 'ring' },
-      sniper: { size: 28, baseSpawn: 1400, multiplier: 2.2, className: 'sniper' },
-      smg: { size: 40, baseSpawn: 520, multiplier: 0.8, className: 'core' }
+      pistol: { size: 56, baseSpawn: 900, multiplier: 1, className: 'core', fireRate:9, ammo:'9/27 bullets' },
+      shotgun: { size: 92, baseSpawn: 1200, multiplier: 0.6, className: 'ring', fireRate:8, ammo:'8/32 bullets' },
+      sniper: { size: 28, baseSpawn: 1400, multiplier: 2.2, className: 'sniper', fireRate:5, ammo:'5/30 bullets' },
+      smg: { size: 40, baseSpawn: 520, multiplier: 0.8, className: 'core', fireRate:30, ammo:'30/90 bullets' }
     };
 
     const LEVELS = {
@@ -194,6 +202,15 @@
     function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
     function formatSeconds(s){ return (Math.round(s * 100) / 100).toFixed(2); }
 
+    function flashBullet(){
+      bulletIcon.classList.add('flash');
+      setTimeout(()=>bulletIcon.classList.remove('flash'),100);
+    }
+
+    function updateAmmoHUD(){
+      ammoDisplay.textContent = WEAPONS[currentWeaponKey].ammo;
+    }
+
     function updateHUD(){
       scoreEl.textContent = Math.round(score);
       timeEl.textContent = Math.max(0, Math.ceil(timeLeft));
@@ -205,6 +222,7 @@
       avgReactionEl.textContent = avg === null ? '—' : formatSeconds(avg);
       weaponNameEl.textContent = currentWeaponKey;
       levelNameEl.textContent = currentLevel;
+      updateAmmoHUD();
     }
 
     // Gun origin: bottom-center (slightly above bottom so tracer is visible)
@@ -287,6 +305,7 @@
         // Score
         score += weapon.multiplier;
         updateHUD();
+        flashBullet();
         // Draw tracer from gun origin to the crosshair (click position)
         const origin = getGunOrigin();
         createTracer(origin.x, origin.y, ev.clientX, ev.clientY);
@@ -316,6 +335,7 @@
       const weapon = WEAPONS[currentWeaponKey];
       score += weapon.multiplier;
       updateHUD();
+      flashBullet();
       const origin = getGunOrigin();
       createTracer(origin.x, origin.y, x, y);
       breakTarget(currentTarget);
@@ -516,6 +536,7 @@
     // Pointer handling: draw tracer from bottom-center to crosshair (click position)
     gameArea.addEventListener('pointerdown', (ev) => {
       if (!running || paused) return;
+      flashBullet();
       // Always draw tracer from bottom-center to the click position (crosshair)
       const origin = getGunOrigin();
       createTracer(origin.x, origin.y, ev.clientX, ev.clientY);
